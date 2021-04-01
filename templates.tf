@@ -3,4 +3,6 @@ data "template_file" "robotstxt" {
 User-agent: *
 Disallow: /
 EOF
+
 }
+

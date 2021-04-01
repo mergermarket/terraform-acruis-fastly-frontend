@@ -1,9 +1,7 @@
-provider "logentries" {}
-
 module "secretsmanager" {
   source   = "./modules/secretsmanager"
-  run_data = "${var.run_data}"
-  env      = "${var.env}"
+  run_data = var.run_data
+  env      = var.env
 }
 
 locals {
@@ -14,23 +12,23 @@ resource "fastly_service_v1" "fastly" {
   name = "${var.env}-${var.domain_name}"
 
   domain {
-    name = "${local.full_domain_name}"
+    name = local.full_domain_name
   }
 
-  default_host = "${var.override_host == "true" ? local.full_domain_name : ""}"
+  default_host = var.override_host == "true" ? local.full_domain_name : ""
   default_ttl  = 60
 
   backend {
-    address               = "${var.backend_address}"
+    address               = var.backend_address
     name                  = "default backend"
     port                  = 443
     use_ssl               = "true"
-    ssl_check_cert        = "${var.ssl_cert_check}"
-    ssl_cert_hostname     = "${var.ssl_cert_hostname}"
-    connect_timeout       = "${var.connect_timeout}"
-    first_byte_timeout    = "${var.first_byte_timeout}"
-    between_bytes_timeout = "${var.between_bytes_timeout}"
-    shield                = "${var.shield}"
+    ssl_check_cert        = var.ssl_cert_check
+    ssl_cert_hostname     = var.ssl_cert_hostname
+    connect_timeout       = var.connect_timeout
+    first_byte_timeout    = var.first_byte_timeout
+    between_bytes_timeout = var.between_bytes_timeout
+    shield                = var.shield
   }
 
   gzip {
@@ -41,8 +39,8 @@ resource "fastly_service_v1" "fastly" {
 
   request_setting {
     name             = "request-setting"
-    force_ssl        = "${var.force_ssl}"
-    bypass_busy_wait = "${var.bypass_busy_wait}"
+    force_ssl        = var.force_ssl
+    bypass_busy_wait = var.bypass_busy_wait
   }
 
   # Override requests for /robots.txt for non-live environments
@@ -50,7 +48,7 @@ resource "fastly_service_v1" "fastly" {
     name              = "override-robots.txt"
     status            = 200
     response          = "OK"
-    content           = "${data.template_file.robotstxt.rendered}"
+    content           = data.template_file.robotstxt.rendered
     content_type      = "text/plain"
     request_condition = "override-robots.txt-condition"
   }
@@ -66,7 +64,7 @@ resource "fastly_service_v1" "fastly" {
     name            = "error-response-404"
     status          = 404
     response        = "Not Found"
-    content         = "${var.not_found_response}"
+    content         = var.not_found_response
     content_type    = "text/html"
     cache_condition = "response-404-condition"
   }
@@ -75,14 +73,14 @@ resource "fastly_service_v1" "fastly" {
     name      = "response-404-condition"
     type      = "CACHE"
     priority  = 5
-    statement = "${var.not_found_response == "" ? "now.sec == \"\"" : "beresp.status == 404 && req.http.Cookie:viewerror != \"true\""}"
+    statement = var.not_found_response == "" ? "now.sec == \"\"" : "beresp.status == 404 && req.http.Cookie:viewerror != \"true\""
   }
 
   response_object {
     name            = "error-response-500"
     status          = 500
     response        = "Server Error"
-    content         = "${var.error_response}"
+    content         = var.error_response
     content_type    = "text/html"
     cache_condition = "response-500-condition"
   }
@@ -91,7 +89,7 @@ resource "fastly_service_v1" "fastly" {
     name      = "response-500-condition"
     type      = "CACHE"
     priority  = 5
-    statement = "${var.error_response == "" ? "now.sec == \"\"" : "beresp.status == 500 && req.http.Cookie:viewerror != \"true\""}"
+    statement = var.error_response == "" ? "now.sec == \"\"" : "beresp.status == 500 && req.http.Cookie:viewerror != \"true\""
   }
 
   # 503 error handling
@@ -99,7 +97,7 @@ resource "fastly_service_v1" "fastly" {
     name            = "error-response-503"
     status          = 503
     response        = "Service Unavailable"
-    content         = "${var.proxy_error_response}"
+    content         = var.proxy_error_response
     content_type    = "text/html"
     cache_condition = "response-503-condition"
   }
@@ -116,7 +114,7 @@ resource "fastly_service_v1" "fastly" {
     name            = "error-response-502"
     status          = 502
     response        = "Bad Gateway"
-    content         = "${var.proxy_error_response}"
+    content         = var.proxy_error_response
     content_type    = "text/html"
     cache_condition = "response-502-condition"
   }
@@ -141,7 +139,7 @@ resource "fastly_service_v1" "fastly" {
     priority  = 10
     statement = "!req.http.Fastly-FF"
   }
-  
+
   # Sanitise HTTP headers
   header {
     name        = "Remove X-Powered-By header"
@@ -182,7 +180,7 @@ resource "fastly_service_v1" "fastly" {
 
   vcl {
     name    = "custom_vcl"
-    content = "${data.template_file.custom_vcl.rendered}"
+    content = data.template_file.custom_vcl.rendered
     main    = true
   }
 
@@ -190,37 +188,37 @@ resource "fastly_service_v1" "fastly" {
 }
 
 data "template_file" "custom_vcl" {
-  template = "${file("${path.module}/custom.vcl")}"
+  template = file("${path.module}/custom.vcl")
 
-  vars {
-    proxy_error_response        = "${var.proxy_error_response}"
-    custom_vcl_backends         = "${var.custom_vcl_backends}"
-    custom_vcl_recv             = "${var.custom_vcl_recv}"
-    custom_vcl_recv_no_shield   = "${var.custom_vcl_recv_no_shield}"
-    custom_vcl_recv_shield_only = "${var.custom_vcl_recv_shield_only}"
-    custom_vcl_error            = "${var.custom_vcl_error}"
-    custom_vcl_deliver          = "${var.custom_vcl_deliver}"
-    vcl_recv_default_action     = "${var.caching == "true" ? "lookup" : "pass"}"
+  vars = {
+    proxy_error_response        = var.proxy_error_response
+    custom_vcl_backends         = var.custom_vcl_backends
+    custom_vcl_recv             = var.custom_vcl_recv
+    custom_vcl_recv_no_shield   = var.custom_vcl_recv_no_shield
+    custom_vcl_recv_shield_only = var.custom_vcl_recv_shield_only
+    custom_vcl_error            = var.custom_vcl_error
+    custom_vcl_deliver          = var.custom_vcl_deliver
+    vcl_recv_default_action     = var.caching == "true" ? "lookup" : "pass"
   }
 }
 
 # resource performing bare-domain redirection to prefix; only for live
 resource "fastly_service_v1" "fastly_bare_domain_redirection" {
   name  = "${var.bare_redirect_domain_name}-redirection"
-  count = "${var.bare_redirect_domain_name != "" ? 1 : 0}"
+  count = var.bare_redirect_domain_name != "" ? 1 : 0
 
   domain {
-    name = "${var.bare_redirect_domain_name}"
+    name = var.bare_redirect_domain_name
   }
 
   backend {
-    address               = "${var.backend_address}"
+    address               = var.backend_address
     name                  = "default backend"
     port                  = 443
     ssl_check_cert        = "false"
-    connect_timeout       = "${var.connect_timeout}"
-    first_byte_timeout    = "${var.first_byte_timeout}"
-    between_bytes_timeout = "${var.between_bytes_timeout}"
+    connect_timeout       = var.connect_timeout
+    first_byte_timeout    = var.first_byte_timeout
+    between_bytes_timeout = var.between_bytes_timeout
   }
 
   response_object {
@@ -238,7 +236,7 @@ resource "fastly_service_v1" "fastly_bare_domain_redirection" {
   }
 
   syslog {
-    name           = "${local.full_domain_name}"
+    name           = local.full_domain_name
     address        = "intake.logs.datadoghq.com"
     port           = "10516"
     message_type   = "blank"
@@ -252,3 +250,4 @@ resource "fastly_service_v1" "fastly_bare_domain_redirection" {
 data "local_file" "container_definitions" {
   filename = "${path.module}/dd_log_format.json"
 }
+
