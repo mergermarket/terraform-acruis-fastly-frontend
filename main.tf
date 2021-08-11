@@ -27,6 +27,7 @@ resource "fastly_service_v1" "fastly" {
     ssl_cert_hostname     = var.ssl_cert_hostname
     connect_timeout       = var.connect_timeout
     first_byte_timeout    = var.first_byte_timeout
+    ssl_sni_hostname      = var.ssl_sni_hostname
     between_bytes_timeout = var.between_bytes_timeout
     shield                = var.shield
   }
