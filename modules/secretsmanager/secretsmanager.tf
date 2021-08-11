@@ -5,5 +5,5 @@ data "aws_secretsmanager_secret" "secret" {
 
 data "aws_secretsmanager_secret_version" "secret" {
   count     = "${var.run_data}"
-  secret_id = "${data.aws_secretsmanager_secret.secret.id}"
+  secret_id = "${data.aws_secretsmanager_secret.secret[0].id}"
 }
