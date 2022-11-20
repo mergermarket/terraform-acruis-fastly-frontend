@@ -69,7 +69,7 @@ variable "ssl_cert_hostname" {
 }
 
 variable "ssl_sni_hostname" {
-  type        = "string"
+  type        = string
   description = "The hostname used for the SNI handshake"
   default     = ""
 }
